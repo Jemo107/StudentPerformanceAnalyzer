@@ -1,6 +1,5 @@
-NAME,MAT,ENG,SCI
-Leonard Muimi,90,72,80
-Ebenezer Kiprop,70,76,65
-Michelle Akello,63,88,72
-Lynn Chebet,77,84,73
-Alfred Kibet,79,65,69
+StudentID,FName,LName,Programme,Mat,Eng,Sci
+25/222,Sandra,Mutegi,MDS,75,80,70
+25/224,Carlos,Ndunda,MDS,90,85,88
+25/226,Paul,Omboga,MDA,60,65,58
+25/228,Ruth,Mwimali,MDA,95,92,90
