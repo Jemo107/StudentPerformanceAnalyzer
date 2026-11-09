@@ -3,33 +3,28 @@ import os
 from abc import ABC, abstractmethod
 
 
-# 1. ABSTRACTION & ENCAPSULATION: Base Student Class
-class Student(ABC):
+# TASK 4 & 5: BASE STUDENT CLASS (ABSTRACTION & ENCAPSULATION)
+class AIUStudent(ABC):
 
     def __init__(self, student_id, first_name, last_name, math, english, science):
         self.student_id = student_id
         self.first_name = first_name
         self.last_name = last_name
-        # Encapsulation: Restricting direct access to raw scores
+        # Encapsulation: Storing test data inside a protected attribute
         self._scores = {"Math": math, "English": english, "Science": science}
 
     @property
     def full_name(self):
-        """Helper property to merge first and last name cleanly."""
+        """Helper property to merge strings cleanly."""
         return f"{self.first_name} {self.last_name}"
 
     @property
     def final_score(self):
-        """Getter method to securely compute and return the average test score."""
+        """Calculates and returns the student's average test score."""
         return sum(self._scores.values()) / len(self._scores)
 
-    # Abstraction: Forcing child classes to define unique scholarship guidelines
-    @abstractmethod
-    def check_scholarship_eligibility(self):
-        pass
-
     def get_grade(self):
-        """Helper method to determine alphabetical letter grades."""
+        """Helper to determine alphabetical letter grades."""
         score = self.final_score
         if score >= 80:
             return "A"
@@ -39,46 +34,82 @@ class Student(ABC):
             return "C"
         return "F"
 
-
-# 2. INHERITANCE, POLYMORPHISM & OVERRIDING: Regular Student (MDS Program)
-class RegularStudent(Student):
-
-    def check_scholarship_eligibility(self):
-        return "Eligible" if self.final_score >= 85 else "Not Eligible"
-
-
-# 2. INHERITANCE, POLYMORPHISM & OVERRIDING: Sports Student (MDA Program)
-class SportsStudent(Student):
-
-    def check_scholarship_eligibility(self):
-        return "Eligible" if self.final_score >= 70 else "Not Eligible"
+    # TASK 5: Shared method blueprint for Polymorphism demonstration
+    @abstractmethod
+    def get_status_details(self):
+        """Returns student-specific classification details."""
+        pass
 
 
-# 3. METHOD OVERLOADING & ANALYSIS
+# TASK 4 & 5: INHERITANCE AND METHOD OVERRIDING
+class ScholarshipStudent(AIUStudent):
+
+    def __init__(self, student_id, first_name, last_name, math, english, science, scholarship_amount=150000):
+        # Using super() to invoke the parent class constructor correctly
+        super().__init__(student_id, first_name, last_name, math, english, science)
+        # Added task-required unique attribute
+        self.scholarship_amount = scholarship_amount
+
+    def is_eligible(self):
+        """Returns true if the student's average is at least 85."""
+        return self.final_score >= 85
+
+    # TASK 4 & 5: Overriding the shared method for type-specific behavior
+    def get_status_details(self):
+        """Overridden method providing scholarship-specific behavior."""
+        status = "Maintained" if self.is_eligible() else "Probation (Below 85)"
+        return f"Scholarship Holder [{status}] - Grant: KES {self.scholarship_amount:,}"
+
+
+# TASK 5: Regular student subclass to complete the Polymorphism demonstration
+class RegularStudent(AIUStudent):
+
+    def get_status_details(self):
+        """Implements the shared method with behavior appropriate to a regular student."""
+        return "Regular Tuition-Paying Student"
+
+
+# TASK 3: PERFORMANCE ANALYZER AND COMPOSITION
 class PerformanceAnalyzer:
 
-    def calculate_summary(self, *students):
-        if not students:
-            return 0, 0, 0
-        scores = [s.final_score for s in students]
-        return max(scores), min(scores), sum(scores) / len(scores)
+    # Composition: Accepts and works directly with a collection of student objects
+    def __init__(self, students):
+        self.students = students
+
+    def highest_average(self):
+        """Returns the student object with the highest average."""
+        if not self.students:
+            return None
+        # Uses standard Python max function looking directly at the object property
+        return max(self.students, key=lambda s: s.final_score)
+
+    def lowest_average(self):
+        """Returns the student object with the lowest average."""
+        if not self.students:
+            return None
+        return min(self.students, key=lambda s: s.final_score)
+
+    def class_average(self):
+        """Calculates the average performance of the entire class."""
+        if not self.students:
+            return 0
+        total = sum(s.final_score for s in self.students)
+        return total / len(self.students)
 
 
-# Helper function to find CSV columns flexibly (handles typos, spaces, or case issues)
+# Flexible CSV mapping helper to prevent column string format crashes
 def get_val(row, *keywords):
-    """Searches a CSV row dictionary for keys matching any of the keywords loosely."""
     for key, value in row.items():
-        # Strip spaces and convert to lowercase for comparison
         clean_key = str(key).strip().lower()
         for kw in keywords:
             if kw.lower() in clean_key:
                 return value
-    raise KeyError(f"Could not find a column matching: {keywords[0]}")
+    raise KeyError(f"Could not find a column matching: {keywords}")
 
 
-# 4. EXECUTION & REPORT GENERATION WITH ERROR HANDLING
+# EXECUTION FLOW
 def main():
-    students = []
+    student_collection = []
     csv_filename = "students.csv"
 
     if not os.path.exists(csv_filename):
@@ -88,53 +119,57 @@ def main():
     try:
         with open(csv_filename, mode="r", encoding="utf-8-sig") as file:
             reader = csv.DictReader(file)
-            for row in reader:
+            for index, row in enumerate(reader):
                 try:
-                    # Dynamically fetches columns matching common variations
                     s_id = get_val(row, "id", "student")
                     f_name = get_val(row, "fname", "first")
                     l_name = get_val(row, "lname", "last")
-                    prog = get_val(row, "prog", "course")
-
                     m = int(get_val(row, "mat"))
                     e = int(get_val(row, "eng"))
                     s = int(get_val(row, "sci"))
-                except (KeyError, ValueError) as e:
-                    print(f"Skipping a row due to data issue: {e}")
+                    prog = get_val(row, "prog", "course")
+                except (KeyError, ValueError) as err:
+                    print(f"Skipping a bad row: {err}")
                     continue
 
-                # Splitting student subtypes based on their 'Programme' column
+                # Dynamically separating student types using the 'Programme' column
                 if "MDA" in str(prog).upper():
-                    student = SportsStudent(s_id, f_name, l_name, m, e, s)
+                    # Instantiate scholarship students with customized constructor parameter
+                    student = ScholarshipStudent(s_id, f_name, l_name, m, e, s, scholarship_amount=120000)
                 else:
                     student = RegularStudent(s_id, f_name, l_name, m, e, s)
 
-                students.append(student)
+                student_collection.append(student)
 
     except Exception as error:
-        print(f"An unexpected error occurred: {error}")
+        print(f"Critical execution error: {error}")
         return
 
-    if not students:
-        print("No valid student records found to evaluate. Check your CSV headers.")
+    if not student_collection:
+        print("No valid data records loaded.")
         return
 
-    # Output individual performance records report
-    print("\n--- STUDENT PERFORMANCE REPORT ---")
-    print(f"{'ID':<8} {'Full Name':<18} {'Average':<10} {'Grade':<8} {'Scholarship':<12}")
-    print("-" * 60)
-    for s in students:
-        print(
-            f"{s.student_id:<8} {s.full_name:<18} {s.final_score:<10.2f} {s.get_grade():<8} {s.check_scholarship_eligibility():<12}")
+    # TASK 5 POLYMORPHISM DEMONSTRATION
+    # Storing different student objects in one collection and calling the shared method in a loop
+    print("\n" + "=" * 35 + " TASK 5: POLYMORPHISM LOOP " + "=" * 35)
+    for s in student_collection:
+        print(f"Student: {s.full_name:<18} | Avg: {s.final_score:<6.2f} | Info: {s.get_status_details()}")
+    print("=" * 97)
 
-    # Class summary analysis block execution
-    analyzer = PerformanceAnalyzer()
-    hi, lo, avg = analyzer.calculate_summary(*students)
+    # TASK 3 PERFORMANCE ANALYZER DEMONSTRATION
+    analyzer = PerformanceAnalyzer(student_collection)
 
-    print("\n--- CLASS SUMMARY STATS ---")
-    print(f"Highest Class Average: {hi:.2f}")
-    print(f"Lowest Class Average:  {lo:.2f}")
-    print(f"Overall Class Average: {avg:.2f}")
+    top_student = analyzer.highest_average()
+    worst_student = analyzer.lowest_average()
+    overall_avg = analyzer.class_average()
+
+    print("\n" + "=" * 15 + " TASK 3: PERFORMANCE ANALYZER SUMMARY " + "=" * 15)
+    if top_student:
+        print(f"Highest Average Student: {top_student.full_name} ({top_student.final_score:.2f}%)")
+    if worst_student:
+        print(f"Lowest Average Student:  {worst_student.full_name} ({worst_student.final_score:.2f}%)")
+    print(f"Overall Class Average:   {overall_avg:.2f}%")
+    print("=" * 70)
 
 
 if __name__ == "__main__":
